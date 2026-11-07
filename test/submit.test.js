@@ -15,9 +15,28 @@ test("student submission is still written through the server endpoint", async ()
   let request;
   global.fetch = async (url, options) => { request = { url, options }; return new Response("{}", { status: 201 }); };
   const res = response();
-  await handler({ method: "POST", body: { name: "Aarav", className: "8-A", schoolName: "School", email: "aarav@example.edu", score: 12, seconds: 90, certId: "CERT-1" } }, res);
+  await handler({ method: "POST", body: { name: " Aarav ", className: "8-A", schoolName: "School", city: " Delhi ", email: "aarav@example.edu", score: 12, seconds: 90, certId: "CERT-1" } }, res);
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body, { success: true });
   assert.match(request.url, /\/rest\/v1\/attempts$/);
   assert.equal(JSON.parse(request.options.body).name, "Aarav");
+  assert.equal(JSON.parse(request.options.body).city, "Delhi");
+});
+
+test("student submission rejects an empty city", async () => {
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "server-only-key";
+  const res = response();
+  await handler({ method: "POST", body: { name: "Aarav", className: "8-A", schoolName: "School", city: " ", email: "aarav@example.edu", score: 12 } }, res);
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(res.body, { error: "Missing required fields" });
+});
+
+test("student submission rejects an invalid email", async () => {
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "server-only-key";
+  const res = response();
+  await handler({ method: "POST", body: { name: "Aarav", className: "8-A", schoolName: "School", city: "Delhi", email: "not-an-email", score: 12 } }, res);
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(res.body, { error: "Invalid email address" });
 });

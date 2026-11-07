@@ -136,6 +136,14 @@
       margin: 0.4rem auto 1.2rem;
     }
 
+    .competition-brand {
+      color: var(--gold);
+      font: 700 clamp(0.78rem, 2.5vw, 0.95rem) system-ui, sans-serif;
+      letter-spacing: 0.08em;
+      text-align: center;
+      margin: 0.1rem auto 0.5rem;
+    }
+
     /* ============================================================
        BUTTONS & FORMS
        ============================================================ */
@@ -547,6 +555,7 @@
           name: attempt.name,
           className: attempt.className,
           schoolName: attempt.schoolName,
+          city: attempt.city,
           email: attempt.email,
           score: attempt.score,
           seconds: attempt.seconds,
@@ -625,6 +634,7 @@
           <div class="logo">&#128364;</div>
           <p class="kick muted">Shubh Deepavali &#10024;</p>
           <h1 style="text-align:center">${escapeHtml(CFG.title)}</h1>
+          <p class="competition-brand">ELT@J, DELHI CENTRAL CHAPTER</p>
           <p class="lead muted">A Diwali crossword. Enter your details, then solve as many words as you can.</p>
           <ul class="rules">
             <li>&#9200; 5 minutes</li>
@@ -645,12 +655,16 @@
             <div class="row">
               <div>
                 <label>School name</label>
-                <input name="school" required maxlength="100" placeholder="e.g. Delhi Public School">
+                <input name="school" required maxlength="100" placeholder="e.g. Hansraj Model School">
               </div>
               <div>
-                <label>Email id</label>
-                <input type="email" name="email" required maxlength="100" placeholder="student@example.com">
+                <label>City</label>
+                <input name="city" required maxlength="60" placeholder="e.g. Delhi">
               </div>
+            </div>
+            <div>
+              <label>Email id</label>
+              <input type="email" name="email" required maxlength="100" placeholder="student@example.com">
             </div>
             <p class="error" id="login-error"></p>
             <button type="submit" class="btn primary">START</button>
@@ -663,12 +677,17 @@
         const name = fd.get("name").trim();
         const cls = fd.get("class").trim();
         const school = fd.get("school").trim();
+        const city = fd.get("city").trim();
         const email = fd.get("email").trim();
-        if (!name || !cls || !school || !email) {
-          $("#login-error").textContent = "Please fill in all fields: name, class, school, and email.";
+        if (!name || !cls || !school || !city || !email) {
+          $("#login-error").textContent = "Please fill in all fields: name, class, school, city, and email.";
           return;
         }
-        startAttempt(name, cls, school, email);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          $("#login-error").textContent = "Please enter a valid email address.";
+          return;
+        }
+        startAttempt(name, cls, school, city, email);
       };
     }
 
@@ -1027,13 +1046,14 @@
     /* ============================================================
        ATTEMPT LIFECYCLE
        ============================================================ */
-    function startAttempt(name, className, schoolName, email) {
+    function startAttempt(name, className, schoolName, city, email) {
       const now = String(Date.now());
       state = {
         id: now,
         name,
         className,
         schoolName,
+        city,
         email,
         start: Date.now(),
         exp: Date.now() + CFG.secs * 1000,

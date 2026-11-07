@@ -30,11 +30,11 @@
     <section id="dashboard-view" class="card hidden" aria-live="polite">
       <div class="toolbar">
         <div><h1>Teacher dashboard</h1><p id="summary">Loading participant records…</p></div>
-        <div class="actions"><button class="secondary" id="export" type="button">Export CSV</button><button id="logout" type="button">Log out</button></div>
+        <div class="actions"><input id="dashboard-search" type="search" placeholder="Search name, school, city…" aria-label="Search participant records"><button class="secondary" id="export" type="button">Export CSV</button><button id="logout" type="button">Log out</button></div>
       </div>
       <p class="error" id="dashboard-error" role="alert"></p>
       <div class="table-wrap">
-        <table><thead><tr><th>Name</th><th>Class</th><th>School</th><th>Email</th><th>Score</th><th>%</th><th>Time</th><th>Submitted</th><th>Certificate ID</th></tr></thead><tbody id="attempts"></tbody></table>
+        <table><thead><tr><th>Name</th><th>Class</th><th>School</th><th>City</th><th>Email</th><th>Score</th><th>%</th><th>Time</th><th>Submitted</th><th>Certificate ID</th></tr></thead><tbody id="attempts"></tbody></table>
       </div>
     </section>
   </main>
@@ -48,6 +48,7 @@
     const dashboardError = document.querySelector("#dashboard-error");
     let supabase;
     let attempts = [];
+    let filteredAttempts = [];
 
     const escapeHtml = (value) => {
       const node = document.createElement("span");
@@ -55,6 +56,16 @@
       return node.innerHTML;
     };
     const time = (seconds) => `${String(Math.floor((Number(seconds) || 0) / 60)).padStart(2, "0")}:${String((Number(seconds) || 0) % 60).padStart(2, "0")}`;
+
+    function renderAttempts() {
+      const query = document.querySelector("#dashboard-search").value.trim().toLowerCase();
+      filteredAttempts = attempts.filter((attempt) => !query || [attempt.name, attempt.class_name, attempt.school_name, attempt.city, attempt.email, attempt.cert_id].some((value) => String(value || "").toLowerCase().includes(query)));
+      document.querySelector("#summary").textContent = `${filteredAttempts.length} of ${attempts.length} submission${attempts.length === 1 ? "" : "s"}`;
+      document.querySelector("#attempts").innerHTML = filteredAttempts.map((attempt) => {
+        const score = Number(attempt.score) || 0;
+        return `<tr><td>${escapeHtml(attempt.name)}</td><td>${escapeHtml(attempt.class_name)}</td><td>${escapeHtml(attempt.school_name)}</td><td>${escapeHtml(attempt.city || "-")}</td><td>${escapeHtml(attempt.email)}</td><td><span class="badge">${score} / 16</span></td><td>${Math.round((score / 16) * 100)}%</td><td>${time(attempt.seconds)}</td><td>${escapeHtml(new Date(attempt.submitted_at).toLocaleString("en-IN"))}</td><td>${escapeHtml(attempt.cert_id || "-")}</td></tr>`;
+      }).join("") || "<tr><td colspan=\"10\">No submissions match this search.</td></tr>";
+    }
 
     async function loadDashboard(session) {
       loginView.classList.add("hidden");
@@ -73,11 +84,7 @@
       }
       if (!response.ok) throw new Error("Unable to load participant records.");
       attempts = await response.json();
-      document.querySelector("#summary").textContent = `${attempts.length} submission${attempts.length === 1 ? "" : "s"}`;
-      document.querySelector("#attempts").innerHTML = attempts.map((attempt) => {
-        const score = Number(attempt.score) || 0;
-        return `<tr><td>${escapeHtml(attempt.name)}</td><td>${escapeHtml(attempt.class_name)}</td><td>${escapeHtml(attempt.school_name)}</td><td>${escapeHtml(attempt.email)}</td><td><span class="badge">${score} / 16</span></td><td>${Math.round((score / 16) * 100)}%</td><td>${time(attempt.seconds)}</td><td>${escapeHtml(new Date(attempt.submitted_at).toLocaleString("en-IN"))}</td><td>${escapeHtml(attempt.cert_id || "-")}</td></tr>`;
-      }).join("") || "<tr><td colspan=\"9\">No submissions yet.</td></tr>";
+      renderAttempts();
     }
 
     function showLogin(message = "") {
@@ -111,9 +118,10 @@
     });
 
     document.querySelector("#logout").addEventListener("click", async () => { await supabase.auth.signOut(); showLogin(); });
+    document.querySelector("#dashboard-search").addEventListener("input", renderAttempts);
     document.querySelector("#export").addEventListener("click", () => {
-      const fields = ["name", "class_name", "school_name", "email", "score", "seconds", "submitted_at", "cert_id"];
-      const csv = [fields.join(","), ...attempts.map((row) => fields.map((field) => `"${String(row[field] ?? "").replaceAll('"', '""')}"`).join(","))].join("\n");
+      const fields = ["name", "class_name", "school_name", "city", "email", "score", "seconds", "submitted_at", "cert_id"];
+      const csv = [fields.join(","), ...filteredAttempts.map((row) => fields.map((field) => `"${String(row[field] ?? "").replaceAll('"', '""')}"`).join(","))].join("\n");
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const a = document.createElement("a"); a.href = url; a.download = "diwali_crossword_scores.csv"; a.click(); URL.revokeObjectURL(url);
     });
     initialise();

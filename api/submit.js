@@ -3,7 +3,7 @@
  * Receives a completed quiz attempt from a student and saves it to Supabase.
  *
  * Body JSON:
- *   { name, className, schoolName, email, score, seconds, certId }
+ *   { name, className, schoolName, city, email, score, seconds, certId }
  */
 export default async function handler(req, res) {
   // Only allow POST
@@ -20,17 +20,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { name, className, schoolName, email, score, seconds, certId } = req.body || {};
+    const { name, className, schoolName, city, email, score, seconds, certId } = req.body || {};
+    const details = {
+      name: typeof name === "string" ? name.trim() : "",
+      className: typeof className === "string" ? className.trim() : "",
+      schoolName: typeof schoolName === "string" ? schoolName.trim() : "",
+      city: typeof city === "string" ? city.trim() : "",
+      email: typeof email === "string" ? email.trim() : "",
+    };
 
-    if (!name || !className || !schoolName || !email || score === undefined) {
+    if (!details.name || !details.className || !details.schoolName || !details.city || !details.email || score === undefined) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email)) {
+      return res.status(400).json({ error: "Invalid email address" });
     }
 
     const payload = {
-      name,
-      class_name: className,
-      school_name: schoolName,
-      email,
+      name: details.name,
+      class_name: details.className,
+      school_name: details.schoolName,
+      city: details.city,
+      email: details.email,
       score: Number(score),
       seconds: Number(seconds) || 0,
       cert_id: certId || "",
