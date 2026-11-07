@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Diwali Crossword Challenge</title>
+  <!-- jsPDF for generating certificates -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+       ============================================================ */
+    :root {
+      --bg: #fff3dc;
+      --card: #fffdf6;
+      --ink: #3b1208;
+      --mut: #8a5a3c;
+      --navy: #7a1220;
+      --gold: #e08a00;
+      --line: #f0d39a;
+      --sel: #ffe7a3;
+      --act: #ffb703;
+      --bad: #c0392b;
+      --ok: #1e8e5a;
+      --shadow: rgba(122, 18, 32, 0.16);
+      --on: #fff;
+
+      --admin-bg: #f7f5f0;
+      --admin-border: #d9d2c4;
+      --admin-row-hover: #f3ede0;
+
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0);
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #26080e;
+        --card: #361019;
+        --ink: #fff1d6;
+        --mut: #e0b98a;
+        --navy: #ffb703;
+        --line: #6b2a2a;
+        --sel: #5a3a10;
+        --act: #b36b00;
+        --shadow: rgba(0, 0, 0, 0.4);
+        --on: #2a0a10;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #26080e;
+      --card: #361019;
+      --ink: #fff1d6;
+      --mut: #e0b98a;
+      --navy: #ffb703;
+      --line: #6b2a2a;
+      --sel: #5a3a10;
+      --act: #b36b00;
+      --shadow: rgba(0, 0, 0, 0.4);
+      --on: #2a0a10;
+    }
+
+    /* ============================================================
+       RESET & BASE
+       ============================================================ */
+    * { box-sizing: border-box; }
+
+    html { scroll-padding-top: env(safe-area-inset-top, 0); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20px 20px, rgba(224, 138, 0, 0.16) 2px, transparent 3px) 0 0 / 40px 40px,
+        var(--bg);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: "";
+      display: block;
+      height: 10px;
+      background: repeating-linear-gradient(90deg, #e08a00 0 14px, #7a1220 14px 28px, #ffb703 28px 42px);
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: clamp(12px, 3vw, 28px);
+    }
+
+    /* ============================================================
+       CARDS & TYPOGRAPHY
+       ============================================================ */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--gold);
+      border-radius: 22px;
+      padding: clamp(18px, 4vw, 34px);
+      box-shadow: 0 10px 36px var(--shadow);
+    }
+
+    .card + .card { margin-top: 16px; }
+
+    h1, h2 {
+      color: var(--navy);
+      margin: 0.2em 0;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: clamp(1.9rem, 6vw, 2.7rem);
+      letter-spacing: 0.01em;
+    }
+
+    .muted {
+      color: var(--mut);
+      font-family: system-ui, sans-serif;
+      font-size: 0.92rem;
+    }
+
+    .kick {
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      text-align: center;
+      font-size: 0.78rem;
+      margin: 0.8rem 0 0.2rem;
+    }
+
+    .lead {
+      text-align: center;
+      max-width: 46ch;
+      margin: 0.4rem auto 1.2rem;
+    }
+
+    /* ============================================================
+       BUTTONS & FORMS
+       ============================================================ */
+    .btn {
+      background: var(--navy);
+      color: var(--on);
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 26px;
+      font: 700 1rem system-ui, sans-serif;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
+      display: inline-block;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .btn:active { transform: translateY(2px); box-shadow: none; }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #ffb703, #e0560a);
+      color: #fff;
+    }
+
+    .btn.outline {
+      background: transparent;
+      color: var(--navy);
+      border: 1.5px solid var(--line);
+      box-shadow: none;
+    }
+
+    .btn:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--ink);
+      font: 1rem system-ui, sans-serif;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(224, 138, 0, 0.2);
+      outline: none;
+    }
+
+    label {
+      font: 600 0.85rem system-ui, sans-serif;
+      display: block;
+      margin: 14px 0 6px;
+      color: var(--mut);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 520px) {
+      .row { grid-template-columns: 1fr; }
+    }
+
+    form .btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 15px;
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+    }
+
+    .error {
+      color: var(--bad);
+      font: 600 0.9rem system-ui, sans-serif;
+      min-height: 1.2em;
+      margin: 0.4rem 0 0;
+    }
+
+    /* ============================================================
+       LOGO / HEADER
+       ============================================================ */
+    .logo {
+      width: 76px;
+      height: 76px;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffb703, #e0560a);
+      display: grid;
+      place-items: center;
+      font-size: 2.2rem;
+      box-shadow: 0 0 0 6px rgba(224, 138, 0, 0.18), 0 6px 18px var(--shadow);
+    }
+
+    .rules {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 0 0 1rem;
+      padding: 0;
+      list-style: none;
+      font: 600 0.82rem system-ui, sans-serif;
+    }
+
+    .rules li {
+      background: var(--sel);
+      color: var(--ink);
+      padding: 6px 12px;
+      border-radius: 99px;
+    }
+
+    /* ============================================================
+       GAME BAR / TIMER / PROGRESS
+       ============================================================ */
+    .bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      position: sticky;
+      top: env(safe-area-inset-top, 0);
+      z-index: 5;
+      background: var(--card);
+      padding: 8px 0;
+    }
+
+    .bar h2 { font-size: 1.15rem; margin: 0; }
+
+    #timer {
+      font: 700 1.6rem ui-monospace, monospace;
+      padding: 6px 16px;
+      border-radius: 12px;
+      background: var(--navy);
+      color: var(--on);
+      min-width: 5.4ch;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #timer.warn { background: #d98a00; color: #fff; }
+    #timer.danger { background: var(--bad); color: #fff; animation: pulse 1s infinite; }
+
+    @keyframes pulse { 50% { opacity: 0.6; } }
+
+    .progress {
+      height: 10px;
+      border-radius: 10px;
+      background: var(--line);
+      overflow: hidden;
+      margin: 6px 0 14px;
+    }
+
+    .progress div {
+      height: 100%;
+      background: linear-gradient(90deg, #ffb703, #e0560a);
+      width: 0;
+      transition: width 0.35s;
+      border-radius: 10px;
+    }
+
+    /* ============================================================
+       CROSSWORD GRID
+       ============================================================ */
+    .play {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 22px;
+    }
+
+    .grid-wrap {
+      position: relative;
+      container-type: inline-size;
+      max-width: 100%;
+      padding: clamp(6px, 1.5vw, 12px);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #grid {
+      --g: clamp(1px, 0.3cqw, 3px);
+      display: grid;
+      gap: var(--g);
+      width: 100%;
+      grid-auto-rows: calc((100cqw - 23 * var(--g)) / 24);
+    }
+
+    .cell { min-width: 0; position: relative; }
+
+    .cell.blank { background: transparent; }
+
+    .cell input {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      text-align: center;
+      font: 700 clamp(0.6rem, 2.5cqw, 1.05rem) system-ui, sans-serif;
+      text-transform: uppercase;
+      border-radius: clamp(2px, 0.7cqw, 7px);
+      caret-color: transparent;
+      border: 1px solid var(--navy);
+      background: var(--card);
+      color: var(--ink);
+    }
+
+    .cell.selected input { background: var(--sel); }
+
+    .cell.active input {
+      background: var(--act);
+      color: #000;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(224, 138, 0, 0.35);
+    }
+
+    .cell .number {
+      position: absolute;
+      top: 1px;
+      left: 2px;
+      font: 700 clamp(0.34rem, 1.4cqw, 0.6rem) system-ui, sans-serif;
+      color: var(--navy);
+      pointer-events: none;
+      font-style: normal;
+    }
+
+    #counter { margin: 10px 2px 0; }
+
+    /* ============================================================
+       CLUES LIST
+       ============================================================ */
+    #clues h2 {
+      font-size: 1.05rem;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 4px;
+      margin: 0.8em 0 0.4em;
+    }
+
+    @media (min-width: 761px) {
+      #clues { columns: 2; column-gap: 28px; }
+      #clues h2 { break-after: avoid; }
+      .clue { break-inside: avoid; }
+    }
+
+    .clue {
+      padding: 7px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: system-ui, sans-serif;
+      font-size: 0.93rem;
+      transition: background 0.12s;
+    }
+
+    .clue:hover, .clue.selected { background: var(--sel); }
+    .clue.selected { box-shadow: inset 3px 0 0 var(--gold); }
+    .clue.done { opacity: 0.5; text-decoration: line-through; }
+
+    /* ============================================================
+       ACTIVE CLUE PANEL & ZOOM HINT
+       ============================================================ */
+    .active-clue {
+      flex-basis: 100%;
+      font: 600 0.9rem / 1.35 system-ui, sans-serif;
+      background: var(--sel);
+      color: var(--ink);
+      padding: 8px 12px;
+      border-radius: 10px;
+      box-shadow: inset 3px 0 0 var(--gold);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.9em;
+    }
+
+    .zoom-hint {
+      display: none;
+      margin: 0 0 10px;
+      padding: 9px 16px;
+      font-size: 0.9rem;
+      width: 100%;
+    }
+
+    @media (max-width: 760px) {
+      .zoom-hint { display: block; }
+      .grid-wrap.zoom { overflow-x: auto; }
+      .grid-wrap.zoom #grid { width: max-content; gap: 3px; }
+      .grid-wrap.zoom .cell { width: 36px; }
+      .grid-wrap.zoom .cell input {
+        font-size: 1.1rem; border-radius: 7px; border-width: 1.5px;
+      }
+      .grid-wrap.zoom .cell .number { font-size: 0.6rem; top: 2px; left: 4px; }
+    }
+
+    @media (max-width: 760px) {
+      .container { padding: 8px; }
+      .card { padding: 14px; }
+      .grid-wrap.zoom .cell { width: 40px; }
+      .grid-wrap.zoom #grid { gap: 4px; grid-auto-rows: 40px; }
+      .grid-wrap.zoom .cell input { font-size: 1.2rem; }
+      .grid-wrap.zoom .cell .number { font-size: 0.65rem; }
+    }
+
+    /* ============================================================
+       DIALOG
+       ============================================================ */
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      color: var(--ink);
+      padding: 26px;
+      max-width: min(92vw, 420px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    dialog::backdrop {
+      background: rgba(40, 8, 14, 0.55);
+      backdrop-filter: blur(3px);
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    /* ============================================================
+       RESULTS / CERTIFICATE
+       ============================================================ */
+    .big {
+      font: 700 clamp(3rem, 12vw, 4.6rem) Georgia;
+      color: var(--navy);
+      margin: 0.1em 0;
+    }
+
+    /* ============================================================
+       ADMIN PANEL
+       ============================================================ */
+    .admin {
+      background: var(--admin-bg);
+      border: 1px solid var(--admin-border);
+    }
+
+    .admin h2 { margin-top: 0; }
+
+    .admin-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+
+    table.admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--admin-border);
+    }
+
+    table.admin-table th,
+    table.admin-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--admin-border);
+    }
+
+    table.admin-table th {
+      background: var(--line);
+      color: var(--ink);
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+
+    table.admin-table tr:last-child td { border-bottom: none; }
+    table.admin-table tr:hover { background: var(--admin-row-hover); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: system-ui, sans-serif;
+      background: var(--sel);
+      color: var(--ink);
+    }
+
+    .badge.perfect { background: var(--ok); color: #fff; }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--mut);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: min(92vw, 400px);
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .modal h3 { margin: 0 0 16px; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    .admin-link {
+      font: 600 0.8rem system-ui, sans-serif;
+      color: var(--mut);
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      cursor: pointer;
+    }
+
+    .admin-link:hover { color: var(--navy); }
+  </style>
+</head>
+<body>
+  <div class="container" id="app"></div>
+
+  <!-- Submit confirmation dialog -->
+  <dialog id="submit-dialog">
+    <h2>Submit your answers?</h2>
+    <p class="muted">You can&rsquo;t change them afterwards.</p>
+    <div class="dialog-actions">
+      <button type="button" class="btn outline" id="keep-solving">Keep solving</button>
+      <button type="button" class="btn primary" id="confirm-submit">Submit</button>
+    </div>
+  </dialog>
+
+  <script>
+    /* ============================================================
+       CONFIGURATION
+       ============================================================ */
+    const CFG = {
+      school: "Class Activity",
+      title: "Deeponomics",
+      secs: 300,                // 5 minutes
+      adminPassword: "admin123", // Change this password before deploying
+      API_BASE: "",             // e.g. "https://your-app.vercel.app" — set after Vercel deploy
+    };
+
+    // Each word: answer, clue, row, col, direction (A = across, D = down)
+    const WORDS = [
+      { a: "POLLUTIONFREE", c: "lifestyle choice of celebrating without toxic fumes and noise pollution", r: 10, k: 5, d: "A" },
+      { a: "GREENCRACKER", c: "eco-friendly alternative to chemical firecrackers that produce minimal smoke", r: 0, k: 16, d: "D" },
+      { a: "ECOFRIENDLY", c: "mindset of honouring nature during festivities by avoiding plastic and crackers", r: 3, k: 10, d: "A" },
+      { a: "DEEPAWALI", c: "the ancient Sanskrit name for the Festival of Lights", r: 3, k: 7, d: "D" },
+      { a: "KAJUKATLI", c: "famous diamond-shaped festive sweet made from cashew nuts and silver foil", r: 7, k: 2, d: "A" },
+      { a: "MARIGOLD", c: "vibrant yellow/orange flower widely used to decorate home altars and doors", r: 5, k: 12, d: "D" },
+      { a: "BHAIDOOJ", c: "a special day following Diwali celebrating the sacred bond between brothers and sisters", r: 12, k: 8, d: "A" },
+      { a: "LAKSHMI", c: "goddess of wealth, fortune, and prosperity worshipped on Diwali", r: 3, k: 19, d: "D" },
+      { a: "RANGOLI", c: "colourful artwork made at entrances using rice flour, powders, or flower petals", r: 1, k: 16, d: "A" },
+      { a: "LANTERN", c: "hanging paper lamp lit outside homes to guide light and festive energy", r: 6, k: 11, d: "A" },
+      { a: "AYODHYA", c: "kingdom to which Lord Rama returned after 14 years of exile", r: 1, k: 3, d: "D" },
+      { a: "MITHAI", c: "general term for Indian traditional sweets distributed to neighbours and family", r: 9, k: 18, d: "A" },
+      { a: "KANDIL", c: "traditional Maharashtrian lantern crafted with colourful paper and tassels", r: 4, k: 0, d: "A" },
+      { a: "TORAN", c: "decorative door hanging made of mango leaves and marigold flowers", r: 6, k: 22, d: "D" },
+      { a: "LADDU", c: "traditional round sweet made of gram flour, ghee, and dry fruits", r: 1, k: 2, d: "A" },
+      { a: "DIYA", c: "small earthen lamp lit with cotton wick and mustard oil", r: 0, k: 22, d: "D" },
+    ];
+
+    const ROWS = 13;
+    const COLS = 24;
+
+    /* ============================================================
+       API HELPERS (talks to Vercel functions -> Supabase)
+       ============================================================ */
+    async function apiSubmit(attempt) {
+      if (!CFG.API_BASE) return;
+      const res = await fetch(`${CFG.API_BASE}/api/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: attempt.name,
+          className: attempt.className,
+          score: attempt.score,
+          seconds: attempt.seconds,
+          certId: attempt.certId,
+        }),
+      });
+      if (!res.ok) throw new Error("Submit failed");
+      return res.json();
+    }
+
+    async function apiFetchScores() {
+      if (!CFG.API_BASE) return [];
+      const res = await fetch(`${CFG.API_BASE}/api/scores`);
+      if (!res.ok) throw new Error("Fetch scores failed");
+      return res.json();
+    }
+
+    /* ============================================================
+       APP STATE
+       ============================================================ */
+    let state = null;        // current attempt
+    let answers = {};        // cell key -> letter
+    let currentCell = null;  // "row,col"
+    let direction = "A";     // "A" or "D"
+    let timerInterval = null;
+    const cells = {};        // "row,col" -> cell metadata
+
+    /* ============================================================
+       DOM SHORTCUTS
+       ============================================================ */
+    const $ = (sel) => document.querySelector(sel);
+    const app = $("#app");
+
+    /* ============================================================
+       GRID BUILDING
+       ============================================================ */
+    function buildGrid() {
+      let num = 0;
+      const ordered = [...WORDS].sort((x, y) => x.r - y.r || x.k - y.k);
+      ordered.forEach((w) => {
+        const key = w.r + "," + w.k;
+        const existing = WORDS.find((o) => o.num && o.r === w.r && o.k === w.k);
+        w.num = existing ? existing.num : ++num;
+
+        for (let i = 0; i < w.a.length; i++) {
+          const r = w.r + (w.d === "D" ? i : 0);
+          const k = w.k + (w.d === "A" ? i : 0);
+          const cellKey = r + "," + k;
+          cells[cellKey] = cells[cellKey] || { r, k, ws: {} };
+          cells[cellKey].ws[w.d] = w;
+          cells[cellKey].num = cells[cellKey].num || (i === 0 ? w.num : 0);
+        }
+      });
+    }
+
+    function cellCoordsForWord(w) {
+      return [...w.a].map((_, i) => (w.r + (w.d === "D" ? i : 0)) + "," + (w.k + (w.d === "A" ? i : 0)));
+    }
+
+    /* ============================================================
+       FORMATTING
+       ============================================================ */
+    function fmtTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    /* ============================================================
+       VIEWS
+       ============================================================ */
+
+    // ---- Landing page -------------------------------------------
+    function renderLanding() {
+      app.innerHTML = `
+        <div class="card">
+          <div class="logo">&#128364;</div>
+          <p class="kick muted">Shubh Deepavali &#10024;</p>
+          <h1 style="text-align:center">${escapeHtml(CFG.title)}</h1>
+          <p class="lead muted">A Diwali crossword. Enter your details, then solve as many words as you can.</p>
+          <ul class="rules">
+            <li>&#9200; 5 minutes</li>
+            <li>&#9733; 1 point per word</li>
+            <li>&#128274; Refresh won&rsquo;t reset the timer</li>
+          </ul>
+          <form id="login-form">
+            <div class="row">
+              <div>
+                <label>Full name</label>
+                <input name="name" required maxlength="60" placeholder="e.g. Aarav Sharma">
+              </div>
+              <div>
+                <label>Class &amp; section</label>
+                <input name="class" required maxlength="10" placeholder="8-A">
+              </div>
+            </div>
+            <p class="error" id="login-error"></p>
+            <button type="submit" class="btn primary">START</button>
+          </form>
+          <p style="margin-top:14px;text-align:center">
+            <span class="admin-link" id="admin-trigger">Admin login</span>
+          </p>
+        </div>`;
+
+      $("#login-form").onsubmit = (e) => {
+        e.preventDefault();
+        const fd = new FormData($("#login-form"));
+        const name = fd.get("name").trim();
+        const cls = fd.get("class").trim();
+        if (!name || !cls) {
+          $("#login-error").textContent = "Please enter both your name and class.";
+          return;
+        }
+        startAttempt(name, cls);
+      };
+
+      $("#admin-trigger").onclick = () => openAdminLogin();
+    }
+
+    // ---- Game view ----------------------------------------------
+    function renderGame() {
+      app.innerHTML = `
+        <div class="card">
+          <div class="bar">
+            <h2>&#128364; ${escapeHtml(state.name)}</h2>
+            <div id="timer"></div>
+            <div class="active-clue" id="active-clue">Tap a square to see its clue</div>
+          </div>
+          <div class="progress"><div id="progress-bar"></div></div>
+          <div class="play">
+            <div>
+              <button type="button" class="btn outline zoom-hint" id="zoom-hint">&#128269; Zoom in to type</button>
+              <div class="grid-wrap" id="grid-wrap">
+                <div id="grid" style="grid-template-columns: repeat(${COLS}, minmax(0, 1fr))"></div>
+              </div>
+              <p class="muted" id="counter"></p>
+            </div>
+            <div id="clues"></div>
+          </div>
+          <div style="margin-top:16px;text-align:right">
+            <button type="button" class="btn" id="submit-btn">Submit</button>
+          </div>
+        </div>`;
+
+      const gridEl = $("#grid");
+      for (let r = 0; r < ROWS; r++) {
+        for (let k = 0; k < COLS; k++) {
+          const cell = cells[r + "," + k];
+          const div = document.createElement("div");
+          if (!cell) {
+            div.className = "cell blank";
+          } else {
+            div.className = "cell";
+            div.dataset.p = r + "," + k;
+            div.innerHTML = (cell.num ? `<span class="number">${cell.num}</span>` : "") +
+              `<input maxlength="1" autocomplete="off" inputmode="text" autocapitalize="characters" aria-label="row ${r + 1} col ${k + 1}">`;
+            const input = div.querySelector("input");
+            input.value = answers[r + "," + k] || "";
+
+            input.onfocus = () => {
+              if (currentCell === r + "," + k && cell.ws[direction]) {
+                // same cell, keep direction
+              } else if (currentCell !== r + "," + k) {
+                if (!cell.ws[direction]) direction = direction === "A" ? "D" : "A";
+              }
+              currentCell = r + "," + k;
+              if (innerWidth <= 760 && !$("#grid-wrap").classList.contains("zoom")) setZoom(true);
+              paint();
+            };
+
+            input.onclick = () => {
+              if (currentCell === r + "," + k && cell.ws.A && cell.ws.D) {
+                direction = direction === "A" ? "D" : "A";
+              }
+              paint();
+            };
+
+            input.oninput = () => {
+              const v = input.value.replace(/[^a-z]/gi, "").toUpperCase().slice(-1);
+              input.value = v;
+              answers[r + "," + k] = v;
+              if (v) stepCell(1);
+              paint();
+            };
+
+            input.onkeydown = (e) => {
+              const move = {
+                ArrowRight: ["A", 1],
+                ArrowLeft: ["A", -1],
+                ArrowDown: ["D", 1],
+                ArrowUp: ["D", -1],
+              }[e.key];
+              if (move) {
+                e.preventDefault();
+                const [dd, s] = move;
+                const nr = r + (dd === "D" ? s : 0);
+                const nk = k + (dd === "A" ? s : 0);
+                if (cells[nr + "," + nk]) {
+                  direction = dd;
+                  focusCell(nr + "," + nk);
+                }
+              } else if (e.key === "Backspace" && !input.value) {
+                e.preventDefault();
+                stepCell(-1);
+              }
+            };
+          }
+          gridEl.appendChild(div);
+        }
+      }
+
+      const cluesEl = $("#clues");
+      ["A", "D"].forEach((dir) => {
+        cluesEl.insertAdjacentHTML("beforeend", `<h2>${dir === "A" ? "Across" : "Down"}</h2>`);
+        WORDS.filter((w) => w.d === dir).forEach((w) => {
+          const clue = document.createElement("div");
+          clue.className = "clue";
+          clue.id = "clue-" + w.num + dir;
+          clue.textContent = w.num + ". " + w.c + " (" + w.a.length + ")";
+          clue.onclick = () => {
+            direction = dir;
+            focusCell(w.r + "," + w.k);
+          };
+          cluesEl.appendChild(clue);
+        });
+      });
+
+      $("#submit-btn").onclick = () => $("#submit-dialog").showModal();
+      $("#zoom-hint").onclick = () => {
+        setZoom(!$("#grid-wrap").classList.contains("zoom"));
+        updateActiveClue();
+      };
+      setZoom(innerWidth <= 760);
+      paint();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(tickClock, 250);
+      tickClock();
+    }
+
+    function setZoom(zoom) {
+      const wrap = $("#grid-wrap");
+      if (!wrap) return;
+      wrap.classList.toggle("zoom", zoom);
+      const btn = $("#zoom-hint");
+      if (btn) btn.textContent = zoom ? "&#128726; Show full grid" : "&#128269; Zoom in to type";
+    }
+
+    function updateActiveClue() {
+      const wrap = $("#grid-wrap");
+      const panel = $("#active-clue");
+      if (!panel) return;
+      const cell = cells[currentCell];
+      const word = cell && cell.ws[direction];
+      if (word) {
+        panel.textContent = word.num + (word.d === "A" ? " Across" : " Down") + ": " + word.c + " (" + word.a.length + ")";
+      } else {
+        panel.textContent = "Tap a square to see its clue";
+      }
+      if (currentCell && wrap.classList.contains("zoom")) {
+        const el = document.querySelector(`[data-p="${currentCell}"]`);
+        if (el) {
+          el.scrollTo({ left: el.offsetLeft - wrap.clientWidth / 2 + el.offsetWidth / 2, behavior: "smooth" });
+        }
+      }
+    }
+
+    function focusCell(key) {
+      const input = document.querySelector(`[data-p="${key}"] input`);
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }
+
+    function stepCell(offset) {
+      if (!currentCell) return;
+      const cell = cells[currentCell];
+      const word = cell && cell.ws[direction];
+      if (!word) return;
+      const coords = cellCoordsForWord(word);
+      const idx = coords.indexOf(currentCell) + offset;
+      if (idx >= 0 && idx < coords.length) focusCell(coords[idx]);
+    }
+
+    function paint() {
+      const word = cells[currentCell] && cells[currentCell].ws[direction];
+      document.querySelectorAll(".cell[data-p]").forEach((d) => d.classList.remove("selected", "active"));
+      document.querySelectorAll(".clue").forEach((e) => e.classList.remove("selected", "done"));
+
+      if (word) {
+        cellCoordsForWord(word).forEach((p) => {
+          const el = document.querySelector(`[data-p="${p}"]`);
+          if (el) el.classList.add("selected");
+        });
+      }
+      if (currentCell) {
+        const el = document.querySelector(`[data-p="${currentCell}"]`);
+        if (el) el.classList.add("active");
+      }
+      if (word) {
+        const clueEl = $("#clue-" + word.num + word.d);
+        if (clueEl) clueEl.classList.add("selected");
+      }
+
+      let filledWords = 0;
+      WORDS.forEach((w) => {
+        const complete = cellCoordsForWord(w).every((p) => answers[p]);
+        if (complete) {
+          filledWords++;
+          const clueEl = $("#clue-" + w.num + w.d);
+          if (clueEl) clueEl.classList.add("done");
+        }
+      });
+
+      $("#progress-bar").style.width = (filledWords / WORDS.length) * 100 + "%";
+      $("#counter").textContent = filledWords + " of " + WORDS.length + " words filled";
+      updateActiveClue();
+    }
+
+    function tickClock() {
+      const left = Math.max(0, Math.ceil((state.exp - Date.now()) / 1000));
+      const el = $("#timer");
+      if (!el) return;
+      el.textContent = fmtTime(left);
+      el.className = left <= 15 ? "danger" : left <= 60 ? "warn" : "";
+      if (left <= 0) finishAttempt();
+    }
+
+    /* ============================================================
+       SUBMIT / RESULTS
+       ============================================================ */
+    async function finishAttempt() {
+      if (state.done) return;
+      clearInterval(timerInterval);
+      if ($("#submit-dialog").open) $("#submit-dialog").close();
+
+      let score = 0;
+      WORDS.forEach((w) => {
+        const guess = cellCoordsForWord(w).map((p) => (answers[p] || "").trim()).join("").toUpperCase();
+        if (guess === w.a) score++;
+      });
+
+      state.done = Math.min(Date.now(), state.exp);
+      state.score = score;
+      state.seconds = Math.round((state.done - state.start) / 1000);
+      state.certId = "CERT-" + String(state.id).replace(/\W/g, "") + "-" + state.start.toString(36).toUpperCase();
+
+      // Save to shared backend (Supabase via Vercel API)
+      try {
+        await apiSubmit(state);
+      } catch (e) {
+        console.error("Could not save score to server:", e);
+      }
+
+      renderResults();
+    }
+
+    function renderResults() {
+      const pct = Math.round((state.score / WORDS.length) * 100);
+      app.innerHTML = `
+        <div class="card" style="text-align:center">
+          <div class="logo">&#128327;</div>
+          <p class="kick muted">Happy Diwali</p>
+          <h1>Well done, ${escapeHtml(state.name)}!</h1>
+          <div class="big">${state.score} / ${WORDS.length}</div>
+          <p class="muted">${pct}% correct &#183; ${fmtTime(state.seconds)} taken</p>
+          <button type="button" class="btn primary" id="download-cert">Download Certificate</button>
+        </div>`;
+      $("#download-cert").onclick = generateCertificate;
+    }
+
+    /* ============================================================
+       CERTIFICATE (PDF via jsPDF)
+       ============================================================ */
+    async function generateCertificate() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+      const W = 297;
+      const H = 210;
+      const M = [122, 18, 32];
+      const G = [224, 138, 0];
+      const T = [59, 18, 8];
+
+      doc.setFillColor(255, 248, 230);
+      doc.rect(0, 0, W, H, "F");
+
+      doc.setDrawColor(...M);
+      doc.setLineWidth(2.5);
+      doc.rect(8, 8, W - 16, H - 16);
+      doc.setDrawColor(...G);
+      doc.setLineWidth(0.8);
+      doc.rect(13, 13, W - 26, H - 26);
+
+      for (let x = 22; x < W - 20; x += 10) {
+        doc.setFillColor(...(x / 10 % 2 ? G : M));
+        doc.circle(x, 19, 1.6, "F");
+        doc.circle(x, H - 19, 1.6, "F");
+      }
+
+      doc.setFillColor(...M);
+      doc.ellipse(W / 2, 40, 11, 4, "F");
+      doc.setFillColor(255, 183, 3);
+      doc.triangle(W / 2 - 3.5, 36.5, W / 2 + 3.5, 36.5, W / 2, 26, "F");
+
+      doc.setTextColor(...M);
+      doc.setFont("times", "bold");
+      doc.setFontSize(12);
+      doc.text("SHUBH DEEPAVALI", W / 2, 52, { align: "center" });
+
+      doc.setFontSize(32);
+      doc.text("Certificate of " + (state.score === WORDS.length ? "Achievement" : "Participation"), W / 2, 72, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(13);
+      doc.setTextColor(...T);
+      doc.text("This is proudly presented to", W / 2, 87, { align: "center" });
+
+      doc.setFont("times", "bolditalic");
+      doc.setFontSize(30);
+      doc.setTextColor(...M);
+      doc.text(state.name, W / 2, 105, { align: "center" });
+
+      doc.setDrawColor(...G);
+      doc.line(80, 110, W - 80, 110);
+      doc.setFont("times", "normal");
+      doc.setFontSize(13);
+      doc.setTextColor(...T);
+      doc.text("Class " + state.className, W / 2, 120, { align: "center" });
+      doc.text("for taking part in the " + CFG.title + " Diwali crossword challenge", W / 2, 130, { align: "center" });
+
+      doc.setFont("times", "bold");
+      doc.text("Score: " + state.score + " out of " + WORDS.length, W / 2, 139, { align: "center" });
+      doc.setFont("times", "normal");
+      doc.text("Date: " + new Date(state.done).toLocaleDateString("en-IN"), W / 2, 146, { align: "center" });
+
+      doc.setFillColor(...G);
+      doc.circle(W / 2, 169, 15, "F");
+      doc.setDrawColor(...M);
+      doc.setLineWidth(1);
+      doc.circle(W / 2, 169, 15);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("times", "bold");
+      doc.setFontSize(8);
+      doc.text("SCORE", W / 2, 162, { align: "center" });
+      doc.setFontSize(18);
+      doc.text(state.score + " / " + WORDS.length, W / 2, 172, { align: "center" });
+
+      doc.setTextColor(...T);
+      doc.setDrawColor(...M);
+      doc.setLineWidth(0.4);
+      doc.line(35, 180, 95, 180);
+      doc.line(W - 95, 180, W - 35, 180);
+      doc.setFont("times", "normal");
+      doc.setFontSize(10);
+      doc.text("Class Teacher", 65, 185, { align: "center" });
+      doc.text("Principal", W - 65, 185, { align: "center" });
+
+      doc.setFontSize(8);
+      doc.text("Certificate ID: " + state.certId, W / 2, 194, { align: "center" });
+
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "certificate-" + state.certId + ".pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    /* ============================================================
+       ADMIN PANEL (password-protected, in-page)
+       ============================================================ */
+    let adminAuthed = false;
+
+    function openAdminLogin() {
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = `
+        <div class="modal">
+          <h3>Admin Login</h3>
+          <label>Password</label>
+          <input type="password" id="admin-pw" maxlength="60">
+          <p class="error" id="admin-error" style="margin-top:10px"></p>
+          <div class="modal-actions">
+            <button type="button" class="btn outline" id="admin-cancel">Cancel</button>
+            <button type="button" class="btn primary" id="admin-ok">Unlock</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      const pwInput = $("#admin-pw");
+      pwInput.focus();
+
+      const ok = () => {
+        if (pwInput.value === CFG.adminPassword) {
+          adminAuthed = true;
+          document.body.removeChild(overlay);
+          renderAdmin();
+        } else {
+          $("#admin-error").textContent = "Incorrect password.";
+        }
+      };
+
+      $("#admin-ok").onclick = ok;
+      $("#admin-cancel").onclick = () => document.body.removeChild(overlay);
+      pwInput.onkeydown = (e) => { if (e.key === "Enter") ok(); };
+    }
+
+    async function renderAdmin() {
+      let attempts = [];
+      try {
+        attempts = await apiFetchScores();
+      } catch (e) {
+        console.error("Could not fetch scores:", e);
+        attempts = [];
+      }
+      attempts.sort((a, b) => new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0));
+
+      const rowsHtml = attempts.map((a) => {
+        const pct = a.score ? Math.round((a.score / 16) * 100) : 0;
+        const perfect = a.score === 16;
+        return `
+          <tr>
+            <td>${escapeHtml(a.name)}</td>
+            <td>${escapeHtml(a.class_name || a.className)}</td>
+            <td><span class="badge ${perfect ? "perfect" : ""}">${a.score} / 16</span></td>
+            <td>${pct}%</td>
+            <td>${fmtTime(a.seconds || 0)}</td>
+            <td>${new Date(a.submitted_at).toLocaleString("en-IN")}</td>
+            <td style="font-family:ui-monospace,monospace;font-size:0.8rem">${escapeHtml(a.cert_id || "-")}</td>
+          </tr>`;
+      }).join("") || `<tr><td colspan="7" class="empty-state">No attempts yet. Students who complete the quiz will appear here.</td></tr>`;
+
+      app.innerHTML = `
+        <div class="card admin">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2>Admin Panel</h2>
+            <button type="button" class="btn outline" id="back-to-landing">Back to quiz</button>
+          </div>
+          <div class="admin-bar">
+            <strong>Total submissions:</strong> <span id="total-count">${attempts.length}</span>
+            <button type="button" class="btn primary" id="export-csv">&#128203; Export to Spreadsheet (CSV)</button>
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Class</th>
+                <th>Score</th>
+                <th>%</th>
+                <th>Time taken</th>
+                <th>Submitted</th>
+                <th>Certificate ID</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>`;
+
+      $("#back-to-landing").onclick = () => { adminAuthed = false; renderLanding(); };
+      $("#export-csv").onclick = () => exportCsv(attempts);
+    }
+
+    function exportCsv(attempts) {
+      const headers = ["Name", "Class", "Score", "Total", "Percentage", "Time Taken (sec)", "Submitted At", "Certificate ID"];
+      const lines = [headers.join(",")];
+      attempts.forEach((a) => {
+        const pct = a.score ? Math.round((a.score / 16) * 100) : 0;
+        const row = [
+          `"${escapeHtml(a.name)}"`,
+          `"${escapeHtml(a.class_name || a.className)}"`,
+          a.score,
+          16,
+          pct,
+          a.seconds || 0,
+          `"${new Date(a.submitted_at).toISOString()}"`,
+          `"${escapeHtml(a.cert_id || "")}"`,
+        ];
+        lines.push(row.join(","));
+      });
+
+      const csv = lines.join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "diwali_crossword_scores_" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    /* ============================================================
+       ATTEMPT LIFECYCLE
+       ============================================================ */
+    function startAttempt(name, className) {
+      const now = String(Date.now());
+      state = {
+        id: now,
+        name,
+        className,
+        start: Date.now(),
+        exp: Date.now() + CFG.secs * 1000,
+        done: null,
+      };
+      answers = {};
+      buildGrid();
+      renderGame();
+    }
+
+    /* ============================================================
+       INIT
+       ============================================================ */
+    function init() {
+      buildGrid();
+      renderLanding();
+
+      // Dialog wiring
+      $("#confirm-submit").onclick = finishAttempt;
+      $("#keep-solving").onclick = () => $("#submit-dialog").close();
+    }
+
+    init();
+  </script>
+</body>
+</html>
