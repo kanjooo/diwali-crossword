@@ -3,7 +3,7 @@
  * Receives a completed quiz attempt from a student and saves it to Supabase.
  *
  * Body JSON:
- *   { name, className, schoolName, city, email, score, seconds, certId }
+ *   { name, className, schoolName, city, email, score, seconds }
  */
 export default async function handler(req, res) {
   // Only allow POST
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { name, className, schoolName, city, email, score, seconds, certId } = req.body || {};
+    const { name, className, schoolName, city, email, score, seconds } = req.body || {};
     const details = {
       name: typeof name === "string" ? name.trim() : "",
       className: typeof className === "string" ? className.trim() : "",
@@ -44,7 +44,6 @@ export default async function handler(req, res) {
       email: details.email,
       score: Number(score),
       seconds: Number(seconds) || 0,
-      cert_id: certId || "",
       submitted_at: new Date().toISOString(),
     };
 

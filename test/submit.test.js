@@ -16,12 +16,14 @@ test("student submission is still written through the server endpoint", async ()
   let request;
   global.fetch = async (url, options) => { request = { url, options }; return new Response("{}", { status: 201 }); };
   const res = response();
-  await handler({ method: "POST", body: { name: " Aarav ", className: "8-A", schoolName: "School", city: " Delhi ", email: "aarav@example.edu", score: 12, seconds: 90, certId: "CERT-1" } }, res);
+  await handler({ method: "POST", body: { name: " Aarav ", className: "8-A", schoolName: "School", city: " Delhi ", email: "aarav@example.edu", score: 12, seconds: 90 } }, res);
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body, { success: true });
   assert.match(request.url, /\/rest\/v1\/attempts$/);
   assert.equal(JSON.parse(request.options.body).name, "Aarav");
   assert.equal(JSON.parse(request.options.body).city, "Delhi");
+  assert.equal(JSON.parse(request.options.body).seconds, 90);
+  assert.equal("cert_id" in JSON.parse(request.options.body), false);
 });
 
 test("student submission rejects an empty city", async () => {
@@ -46,7 +48,10 @@ test("completed attempts post every registration and score field to the relative
   const page = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.match(page, /fetch\("\/api\/submit", \{/);
   assert.doesNotMatch(page, /API_BASE/);
-  for (const field of ["name", "className", "schoolName", "city", "email", "score", "seconds", "certId"]) {
+  for (const field of ["name", "className", "schoolName", "city", "email", "score", "seconds"]) {
     assert.match(page, new RegExp(`${field}: attempt\\.${field}`));
   }
+  assert.doesNotMatch(page, /certId|certificate/i);
+  assert.match(page, /state\.submitted \|\| state\.submitting/);
+  assert.match(page, /id="retry-submit"/);
 });
