@@ -1,0 +1,23 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import handler from "../api/submit.js";
+
+function response() {
+  return { statusCode: 0, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; }, setHeader() {} };
+}
+
+const originalFetch = global.fetch;
+test.afterEach(() => { global.fetch = originalFetch; delete process.env.SUPABASE_URL; delete process.env.SUPABASE_SERVICE_ROLE_KEY; });
+
+test("student submission is still written through the server endpoint", async () => {
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "server-only-key";
+  let request;
+  global.fetch = async (url, options) => { request = { url, options }; return new Response("{}", { status: 201 }); };
+  const res = response();
+  await handler({ method: "POST", body: { name: "Aarav", className: "8-A", schoolName: "School", email: "aarav@example.edu", score: 12, seconds: 90, certId: "CERT-1" } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { success: true });
+  assert.match(request.url, /\/rest\/v1\/attempts$/);
+  assert.equal(JSON.parse(request.options.body).name, "Aarav");
+});

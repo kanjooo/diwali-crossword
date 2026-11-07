@@ -25,9 +25,6 @@
       --shadow: rgba(122, 18, 32, 0.16);
       --on: #fff;
 
-      --admin-bg: #f7f5f0;
-      --admin-border: #d9d2c4;
-      --admin-row-hover: #f3ede0;
 
       box-sizing: border-box;
       padding-top: env(safe-area-inset-top, 0);
@@ -489,110 +486,6 @@
       margin: 0.1em 0;
     }
 
-    /* ============================================================
-       ADMIN PANEL
-       ============================================================ */
-    .admin {
-      background: var(--admin-bg);
-      border: 1px solid var(--admin-border);
-    }
-
-    .admin h2 { margin-top: 0; }
-
-    .admin-bar {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-      align-items: center;
-    }
-
-    table.admin-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-family: system-ui, sans-serif;
-      font-size: 0.9rem;
-      background: var(--card);
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--admin-border);
-    }
-
-    table.admin-table th,
-    table.admin-table td {
-      padding: 10px 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--admin-border);
-    }
-
-    table.admin-table th {
-      background: var(--line);
-      color: var(--ink);
-      font-weight: 700;
-      position: sticky;
-      top: 0;
-    }
-
-    table.admin-table tr:last-child td { border-bottom: none; }
-    table.admin-table tr:hover { background: var(--admin-row-hover); }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 99px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      font-family: system-ui, sans-serif;
-      background: var(--sel);
-      color: var(--ink);
-    }
-
-    .badge.perfect { background: var(--ok); color: #fff; }
-
-    .empty-state {
-      text-align: center;
-      padding: 32px 16px;
-      color: var(--mut);
-    }
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.45);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-
-    .modal {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 24px;
-      max-width: min(92vw, 400px);
-      width: 100%;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-    }
-
-    .modal h3 { margin: 0 0 16px; }
-
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      margin-top: 16px;
-    }
-
-    .admin-link {
-      font: 600 0.8rem system-ui, sans-serif;
-      color: var(--mut);
-      text-decoration: underline;
-      text-decoration-style: dotted;
-      cursor: pointer;
-    }
-
-    .admin-link:hover { color: var(--navy); }
   </style>
 </head>
 <body>
@@ -616,7 +509,6 @@
       school: "Class Activity",
       title: "Deeponomics",
       secs: 300,                // 5 minutes
-      adminPassword: "admin123", // Change this password before deploying
       API_BASE: "",             // e.g. "https://your-app.vercel.app" — set after Vercel deploy
     };
 
@@ -662,13 +554,6 @@
         }),
       });
       if (!res.ok) throw new Error("Submit failed");
-      return res.json();
-    }
-
-    async function apiFetchScores() {
-      if (!CFG.API_BASE) return [];
-      const res = await fetch(`${CFG.API_BASE}/api/scores`);
-      if (!res.ok) throw new Error("Fetch scores failed");
       return res.json();
     }
 
@@ -770,9 +655,6 @@
             <p class="error" id="login-error"></p>
             <button type="submit" class="btn primary">START</button>
           </form>
-          <p style="margin-top:14px;text-align:center">
-            <span class="admin-link" id="admin-trigger">Admin login</span>
-          </p>
         </div>`;
 
       $("#login-form").onsubmit = (e) => {
@@ -788,8 +670,6 @@
         }
         startAttempt(name, cls, school, email);
       };
-
-      $("#admin-trigger").onclick = () => openAdminLogin();
     }
 
     // ---- Game view ----------------------------------------------
@@ -1138,136 +1018,6 @@
       const link = document.createElement("a");
       link.href = url;
       link.download = "certificate-" + state.certId + ".pdf";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
-
-    /* ============================================================
-       ADMIN PANEL (password-protected, in-page)
-       ============================================================ */
-    let adminAuthed = false;
-
-    function openAdminLogin() {
-      const overlay = document.createElement("div");
-      overlay.className = "modal-overlay";
-      overlay.innerHTML = `
-        <div class="modal">
-          <h3>Admin Login</h3>
-          <label>Password</label>
-          <input type="password" id="admin-pw" maxlength="60">
-          <p class="error" id="admin-error" style="margin-top:10px"></p>
-          <div class="modal-actions">
-            <button type="button" class="btn outline" id="admin-cancel">Cancel</button>
-            <button type="button" class="btn primary" id="admin-ok">Unlock</button>
-          </div>
-        </div>`;
-      document.body.appendChild(overlay);
-
-      const pwInput = $("#admin-pw");
-      pwInput.focus();
-
-      const ok = () => {
-        if (pwInput.value === CFG.adminPassword) {
-          adminAuthed = true;
-          document.body.removeChild(overlay);
-          renderAdmin();
-        } else {
-          $("#admin-error").textContent = "Incorrect password.";
-        }
-      };
-
-      $("#admin-ok").onclick = ok;
-      $("#admin-cancel").onclick = () => document.body.removeChild(overlay);
-      pwInput.onkeydown = (e) => { if (e.key === "Enter") ok(); };
-    }
-
-    async function renderAdmin() {
-      let attempts = [];
-      try {
-        attempts = await apiFetchScores();
-      } catch (e) {
-        console.error("Could not fetch scores:", e);
-        attempts = [];
-      }
-      attempts.sort((a, b) => new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0));
-
-      const rowsHtml = attempts.map((a) => {
-        const pct = a.score ? Math.round((a.score / 16) * 100) : 0;
-        const perfect = a.score === 16;
-        return `
-          <tr>
-            <td>${escapeHtml(a.name)}</td>
-            <td>${escapeHtml(a.class_name || a.className)}</td>
-            <td>${escapeHtml(a.school_name || a.schoolName)}</td>
-            <td>${escapeHtml(a.email)}</td>
-            <td><span class="badge ${perfect ? "perfect" : ""}">${a.score} / 16</span></td>
-            <td>${pct}%</td>
-            <td>${fmtTime(a.seconds || 0)}</td>
-            <td>${new Date(a.submitted_at).toLocaleString("en-IN")}</td>
-            <td style="font-family:ui-monospace,monospace;font-size:0.8rem">${escapeHtml(a.cert_id || "-")}</td>
-          </tr>`;
-      }).join("") || `<tr><td colspan="9" class="empty-state">No attempts yet. Students who complete the quiz will appear here.</td></tr>`;
-
-      app.innerHTML = `
-        <div class="card admin">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <h2>Admin Panel</h2>
-            <button type="button" class="btn outline" id="back-to-landing">Back to quiz</button>
-          </div>
-          <div class="admin-bar">
-            <strong>Total submissions:</strong> <span id="total-count">${attempts.length}</span>
-            <button type="button" class="btn primary" id="export-csv">&#128203; Export to Spreadsheet (CSV)</button>
-          </div>
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Class</th>
-                <th>School</th>
-                <th>Email</th>
-                <th>Score</th>
-                <th>%</th>
-                <th>Time taken</th>
-                <th>Submitted</th>
-                <th>Certificate ID</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-        </div>`;
-
-      $("#back-to-landing").onclick = () => { adminAuthed = false; renderLanding(); };
-      $("#export-csv").onclick = () => exportCsv(attempts);
-    }
-
-    function exportCsv(attempts) {
-      const headers = ["Name", "Class", "School", "Email", "Score", "Total", "Percentage", "Time Taken (sec)", "Submitted At", "Certificate ID"];
-      const lines = [headers.join(",")];
-      attempts.forEach((a) => {
-        const pct = a.score ? Math.round((a.score / 16) * 100) : 0;
-        const row = [
-          `"${escapeHtml(a.name)}"`,
-          `"${escapeHtml(a.class_name || a.className)}"`,
-          `"${escapeHtml(a.school_name || a.schoolName)}"`,
-          `"${escapeHtml(a.email)}"`,
-          a.score,
-          16,
-          pct,
-          a.seconds || 0,
-          `"${new Date(a.submitted_at).toISOString()}"`,
-          `"${escapeHtml(a.cert_id || "")}"`,
-        ];
-        lines.push(row.join(","));
-      });
-
-      const csv = lines.join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "diwali_crossword_scores_" + new Date().toISOString().slice(0, 10) + ".csv";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

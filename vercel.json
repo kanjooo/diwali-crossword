@@ -2,6 +2,7 @@
   "version": 2,
   "routes": [
     { "src": "/api/submit", "dest": "/api/submit.js" },
-    { "src": "/api/scores", "dest": "/api/scores.js" }
+    { "src": "/api/scores", "dest": "/api/scores.js" },
+    { "src": "/api/auth-config", "dest": "/api/auth-config.js" }
   ]
 }
