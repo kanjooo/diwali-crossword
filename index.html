@@ -616,8 +616,8 @@
       school: "Class Activity",
       title: "Deeponomics",
       secs: 300,                // 5 minutes
-      adminPassword: "rqrev39776", // Change this password before deploying
-      API_BASE: "https://diwali-crossword.vercel.app/",             // e.g. "https://your-app.vercel.app" — set after Vercel deploy
+      adminPassword: "admin123", // Change this password before deploying
+      API_BASE: "",             // e.g. "https://your-app.vercel.app" — set after Vercel deploy
     };
 
     // Each word: answer, clue, row, col, direction (A = across, D = down)
@@ -654,6 +654,8 @@
         body: JSON.stringify({
           name: attempt.name,
           className: attempt.className,
+          schoolName: attempt.schoolName,
+          email: attempt.email,
           score: attempt.score,
           seconds: attempt.seconds,
           certId: attempt.certId,
@@ -755,6 +757,16 @@
                 <input name="class" required maxlength="10" placeholder="8-A">
               </div>
             </div>
+            <div class="row">
+              <div>
+                <label>School name</label>
+                <input name="school" required maxlength="100" placeholder="e.g. Delhi Public School">
+              </div>
+              <div>
+                <label>Email id</label>
+                <input type="email" name="email" required maxlength="100" placeholder="student@example.com">
+              </div>
+            </div>
             <p class="error" id="login-error"></p>
             <button type="submit" class="btn primary">START</button>
           </form>
@@ -768,11 +780,13 @@
         const fd = new FormData($("#login-form"));
         const name = fd.get("name").trim();
         const cls = fd.get("class").trim();
-        if (!name || !cls) {
-          $("#login-error").textContent = "Please enter both your name and class.";
+        const school = fd.get("school").trim();
+        const email = fd.get("email").trim();
+        if (!name || !cls || !school || !email) {
+          $("#login-error").textContent = "Please fill in all fields: name, class, school, and email.";
           return;
         }
-        startAttempt(name, cls);
+        startAttempt(name, cls, school, email);
       };
 
       $("#admin-trigger").onclick = () => openAdminLogin();
@@ -1186,13 +1200,15 @@
           <tr>
             <td>${escapeHtml(a.name)}</td>
             <td>${escapeHtml(a.class_name || a.className)}</td>
+            <td>${escapeHtml(a.school_name || a.schoolName)}</td>
+            <td>${escapeHtml(a.email)}</td>
             <td><span class="badge ${perfect ? "perfect" : ""}">${a.score} / 16</span></td>
             <td>${pct}%</td>
             <td>${fmtTime(a.seconds || 0)}</td>
             <td>${new Date(a.submitted_at).toLocaleString("en-IN")}</td>
             <td style="font-family:ui-monospace,monospace;font-size:0.8rem">${escapeHtml(a.cert_id || "-")}</td>
           </tr>`;
-      }).join("") || `<tr><td colspan="7" class="empty-state">No attempts yet. Students who complete the quiz will appear here.</td></tr>`;
+      }).join("") || `<tr><td colspan="9" class="empty-state">No attempts yet. Students who complete the quiz will appear here.</td></tr>`;
 
       app.innerHTML = `
         <div class="card admin">
@@ -1209,6 +1225,8 @@
               <tr>
                 <th>Name</th>
                 <th>Class</th>
+                <th>School</th>
+                <th>Email</th>
                 <th>Score</th>
                 <th>%</th>
                 <th>Time taken</th>
@@ -1225,13 +1243,15 @@
     }
 
     function exportCsv(attempts) {
-      const headers = ["Name", "Class", "Score", "Total", "Percentage", "Time Taken (sec)", "Submitted At", "Certificate ID"];
+      const headers = ["Name", "Class", "School", "Email", "Score", "Total", "Percentage", "Time Taken (sec)", "Submitted At", "Certificate ID"];
       const lines = [headers.join(",")];
       attempts.forEach((a) => {
         const pct = a.score ? Math.round((a.score / 16) * 100) : 0;
         const row = [
           `"${escapeHtml(a.name)}"`,
           `"${escapeHtml(a.class_name || a.className)}"`,
+          `"${escapeHtml(a.school_name || a.schoolName)}"`,
+          `"${escapeHtml(a.email)}"`,
           a.score,
           16,
           pct,
@@ -1257,12 +1277,14 @@
     /* ============================================================
        ATTEMPT LIFECYCLE
        ============================================================ */
-    function startAttempt(name, className) {
+    function startAttempt(name, className, schoolName, email) {
       const now = String(Date.now());
       state = {
         id: now,
         name,
         className,
+        schoolName,
+        email,
         start: Date.now(),
         exp: Date.now() + CFG.secs * 1000,
         done: null,

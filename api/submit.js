@@ -3,7 +3,7 @@
  * Receives a completed quiz attempt from a student and saves it to Supabase.
  *
  * Body JSON:
- *   { name, className, score, seconds, certId }
+ *   { name, className, schoolName, email, score, seconds, certId }
  */
 export default async function handler(req, res) {
   // Only allow POST
@@ -20,15 +20,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { name, className, score, seconds, certId } = req.body || {};
+    const { name, className, schoolName, email, score, seconds, certId } = req.body || {};
 
-    if (!name || !className || score === undefined) {
+    if (!name || !className || !schoolName || !email || score === undefined) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     const payload = {
       name,
       class_name: className,
+      school_name: schoolName,
+      email,
       score: Number(score),
       seconds: Number(seconds) || 0,
       cert_id: certId || "",
