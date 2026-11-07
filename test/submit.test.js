@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import handler from "../api/submit.js";
 
 function response() {
@@ -39,4 +40,13 @@ test("student submission rejects an invalid email", async () => {
   await handler({ method: "POST", body: { name: "Aarav", className: "8-A", schoolName: "School", city: "Delhi", email: "not-an-email", score: 12 } }, res);
   assert.equal(res.statusCode, 400);
   assert.deepEqual(res.body, { error: "Invalid email address" });
+});
+
+test("completed attempts post every registration and score field to the relative submit route", async () => {
+  const page = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(page, /fetch\("\/api\/submit", \{/);
+  assert.doesNotMatch(page, /API_BASE/);
+  for (const field of ["name", "className", "schoolName", "city", "email", "score", "seconds", "certId"]) {
+    assert.match(page, new RegExp(`${field}: attempt\\.${field}`));
+  }
 });

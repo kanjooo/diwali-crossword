@@ -517,7 +517,6 @@
       school: "Class Activity",
       title: "Deeponomics",
       secs: 300,                // 5 minutes
-      API_BASE: "",             // e.g. "https://your-app.vercel.app" — set after Vercel deploy
     };
 
     // Each word: answer, clue, row, col, direction (A = across, D = down)
@@ -547,8 +546,7 @@
        API HELPERS (talks to Vercel functions -> Supabase)
        ============================================================ */
     async function apiSubmit(attempt) {
-      if (!CFG.API_BASE) return;
-      const res = await fetch(`${CFG.API_BASE}/api/submit`, {
+      const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -562,7 +560,16 @@
           certId: attempt.certId,
         }),
       });
-      if (!res.ok) throw new Error("Submit failed");
+      if (!res.ok) {
+        let message = "Unable to submit your score.";
+        try {
+          const body = await res.json();
+          message = body.error || message;
+        } catch (_) {
+          // Use the safe fallback message when the server did not return JSON.
+        }
+        throw new Error(message);
+      }
       return res.json();
     }
 
@@ -904,29 +911,60 @@
        SUBMIT / RESULTS
        ============================================================ */
     async function finishAttempt() {
-      if (state.done) return;
+      if (!state || state.submitted || state.submitting) return;
       clearInterval(timerInterval);
       if ($("#submit-dialog").open) $("#submit-dialog").close();
 
-      let score = 0;
-      WORDS.forEach((w) => {
-        const guess = cellCoordsForWord(w).map((p) => (answers[p] || "").trim()).join("").toUpperCase();
-        if (guess === w.a) score++;
-      });
-
-      state.done = Math.min(Date.now(), state.exp);
-      state.score = score;
-      state.seconds = Math.round((state.done - state.start) / 1000);
-      state.certId = "CERT-" + String(state.id).replace(/\W/g, "") + "-" + state.start.toString(36).toUpperCase();
-
-      // Save to shared backend (Supabase via Vercel API)
-      try {
-        await apiSubmit(state);
-      } catch (e) {
-        console.error("Could not save score to server:", e);
+      if (!state.done) {
+        let score = 0;
+        WORDS.forEach((w) => {
+          const guess = cellCoordsForWord(w).map((p) => (answers[p] || "").trim()).join("").toUpperCase();
+          if (guess === w.a) score++;
+        });
+        state.done = Math.min(Date.now(), state.exp);
+        state.score = score;
+        state.seconds = Math.round((state.done - state.start) / 1000);
+        state.certId = "CERT-" + String(state.id).replace(/\W/g, "") + "-" + state.start.toString(36).toUpperCase();
       }
 
-      renderResults();
+      await submitCompletedAttempt();
+    }
+
+    async function submitCompletedAttempt() {
+      if (state.submitted || state.submitting) return;
+      state.submitting = true;
+      renderSubmitting();
+      try {
+        await apiSubmit(state);
+        state.submitted = true;
+        renderResults();
+      } catch (e) {
+        console.error("Could not save score to server:", e);
+        renderSubmissionError(e.message);
+      } finally {
+        state.submitting = false;
+      }
+    }
+
+    function renderSubmitting() {
+      app.innerHTML = `
+        <div class="card" style="text-align:center">
+          <div class="logo">&#128640;</div>
+          <h1>Submitting your score…</h1>
+          <p class="muted">Please keep this page open.</p>
+        </div>`;
+    }
+
+    function renderSubmissionError(message) {
+      app.innerHTML = `
+        <div class="card" style="text-align:center">
+          <div class="logo">&#9888;</div>
+          <h1>Your score is ready</h1>
+          <p class="muted">${state.score} / ${WORDS.length} &#183; ${fmtTime(state.seconds)} taken</p>
+          <p class="error">${escapeHtml(message || "We could not save your score. Please try again.")}</p>
+          <button type="button" class="btn primary" id="retry-submit">Retry submission</button>
+        </div>`;
+      $("#retry-submit").onclick = submitCompletedAttempt;
     }
 
     function renderResults() {
@@ -1058,6 +1096,8 @@
         start: Date.now(),
         exp: Date.now() + CFG.secs * 1000,
         done: null,
+        submitting: false,
+        submitted: false,
       };
       answers = {};
       buildGrid();
